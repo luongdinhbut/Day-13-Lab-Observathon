@@ -1,12 +1,127 @@
 {
-  "team": "TODO-team-name",
+  "team": "observathon-team",
   "schema_version": 1,
   "findings": [
     {
+      "fault_class": "error_spike",
+      "evidence": {
+        "baseline_config": {"tool_error_rate": 0.18, "retry.enabled": false},
+        "telemetry_signal": "trace_errors/status != ok spikes in AGENT_CALL logs",
+        "trace_ids": []
+      },
+      "root_cause": "Intermittent tool failures were enabled while retry was disabled.",
+      "suggested_fix": "Set tool_error_rate to 0.0, enable bounded retry, and log trace_errors per request."
+    },
+    {
       "fault_class": "latency_spike",
-      "evidence": {"metric": "latency_p95_ms", "observed": "TODO from your telemetry", "trace_ids": []},
-      "root_cause": "TODO: what config knob or behavior causes it?",
-      "suggested_fix": "TODO: config change and/or wrapper mitigation"
+      "evidence": {
+        "baseline_config": {"max_steps": 12, "loop_guard": false, "tool_budget": 0},
+        "telemetry_signal": "high wall_ms/reported_latency_ms on requests with repeated tools",
+        "trace_ids": []
+      },
+      "root_cause": "The agent could take too many steps and repeat tool calls.",
+      "suggested_fix": "Enable loop_guard, cap max_steps, set tool_budget, and cache repeated requests."
+    },
+    {
+      "fault_class": "cost_blowup",
+      "evidence": {
+        "baseline_config": {
+          "model_price_tier": "premium",
+          "context_size": 8,
+          "verbose_system": true,
+          "max_completion_tokens": 2000
+        },
+        "telemetry_signal": "AGENT_CALL tokens/cost_usd higher than needed for checkout math",
+        "trace_ids": []
+      },
+      "root_cause": "The prompt/context/output budget were oversized for a short deterministic task.",
+      "suggested_fix": "Use a compact prompt, smaller context/output caps, cheaper tier, and tool caching."
+    },
+    {
+      "fault_class": "quality_drift",
+      "evidence": {
+        "baseline_config": {"session_drift_rate": 0.06, "context_reset_every": 0},
+        "telemetry_signal": "quality and arithmetic can degrade as turn_index increases",
+        "trace_ids": []
+      },
+      "root_cause": "Session drift was explicitly enabled without resets or consistency checks.",
+      "suggested_fix": "Set session_drift_rate to 0.0, reset context periodically, lower temperature, and verify arithmetic."
+    },
+    {
+      "fault_class": "infinite_loop",
+      "evidence": {
+        "baseline_config": {"loop_guard": false, "tool_budget": 0},
+        "telemetry_signal": "repeated_tool_calls > 0 or status loop/max_steps",
+        "trace_ids": []
+      },
+      "root_cause": "There was no guard against repeated identical tool invocations.",
+      "suggested_fix": "Enable loop_guard, cap tool_budget, retry only once after loop/max_steps, and log repeated_tool_calls."
+    },
+    {
+      "fault_class": "tool_failure",
+      "evidence": {
+        "baseline_config": {
+          "normalize_unicode": false,
+          "catalog_override": {"macbook": {"in_stock": false}}
+        },
+        "telemetry_signal": "MacBook and diacritic destinations can disagree with expected tool behavior",
+        "trace_ids": []
+      },
+      "root_cause": "A bad catalog override and disabled Unicode normalization corrupt tool inputs/results.",
+      "suggested_fix": "Clear catalog_override and enable normalize_unicode."
+    },
+    {
+      "fault_class": "pii_leak",
+      "evidence": {
+        "baseline_config": {"redact_pii": false},
+        "baseline_prompt": "No rule preventing email/phone echoing.",
+        "telemetry_signal": "answer_redactions/pii_in_answer in AGENT_CALL logs",
+        "trace_ids": []
+      },
+      "root_cause": "The agent was allowed to repeat user contact data.",
+      "suggested_fix": "Add a no-PII prompt rule and redact both input notes and output answers in the wrapper."
+    },
+    {
+      "fault_class": "fabrication",
+      "evidence": {
+        "baseline_prompt": "Asked the assistant to help and give a total without grounding/refusal rules.",
+        "telemetry_signal": "answers with totals after unknown/out-of-stock tool results",
+        "trace_ids": []
+      },
+      "root_cause": "The original prompt encouraged confident totals even when tools could not support an order.",
+      "suggested_fix": "Require check_stock grounding and refuse unknown/out-of-stock/unsupported orders with no total."
+    },
+    {
+      "fault_class": "arithmetic_error",
+      "evidence": {
+        "baseline_config": {"temperature": 1.6, "verify": false},
+        "baseline_prompt": "No exact subtotal/discount/shipping formula.",
+        "telemetry_signal": "computed total differs from tool-derived total",
+        "trace_ids": []
+      },
+      "root_cause": "A hot model was estimating math instead of following a deterministic formula.",
+      "suggested_fix": "Lower temperature, enable verify, and put the exact integer formula in the system prompt."
+    },
+    {
+      "fault_class": "tool_overuse",
+      "evidence": {
+        "baseline_config": {"tool_budget": 0},
+        "baseline_prompt": "No instruction to call each tool at most once.",
+        "telemetry_signal": "tools_used count exceeds the minimum needed for product/coupon/destination",
+        "trace_ids": []
+      },
+      "root_cause": "The agent had no tool budget or economy rule.",
+      "suggested_fix": "Set tool_budget to 4 and prompt the model to call each required tool once."
+    },
+    {
+      "fault_class": "prompt_injection",
+      "evidence": {
+        "baseline_prompt": "No instruction to treat order notes as untrusted data.",
+        "telemetry_signal": "private note/GHI CHU text can override real tool prices or policies",
+        "trace_ids": []
+      },
+      "root_cause": "Instructions embedded in order notes could be followed as if they were developer instructions.",
+      "suggested_fix": "Add prompt injection defense and strip note/instruction tails in wrapper before calling the agent."
     }
   ]
 }
