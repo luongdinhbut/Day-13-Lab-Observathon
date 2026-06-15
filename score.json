@@ -1,0 +1,21 @@
+{
+  "team": "luongdinhbut",
+  "phase": "private",
+  "headline": 55.56,
+  "sub": {
+    "correct": 0.0,
+    "quality": 0.1828,
+    "error": 0.0,
+    "latency": 1.0,
+    "cost": 1.0,
+    "drift": 0.8361,
+    "prompt": 0.5188
+  },
+  "diag_f1": 1.0,
+  "n": 80,
+  "n_correct": 0,
+  "judge_mode": "offline",
+  "weights_hash": "e81a8ed58d93",
+  "key_hash": "7e3905b75db0",
+  "sig": "b372bf0380592ffaa7d05b9b697a5a176609a36716350c6e8affa2fdab424a1b"
+}
